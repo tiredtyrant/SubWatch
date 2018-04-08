@@ -14,13 +14,6 @@ from threading import Thread, activeCount
 
 r = praw.Reddit(user_agent = 'IRC SubWatch by /u/Dissimulate')
 
-try:
-
-    r.refresh_access_information()
-
-except:
-
-    sys.exit('Failed to refresh access information.')
 
 if r.user == None:
 
@@ -49,16 +42,6 @@ def get_submissions(num):
 
 
     r = praw.Reddit(user_agent = 'IRC SubWatch by /u/Dissimulate')
-
-    try:
-
-        r.refresh_access_information()
-
-    except:
-
-        print('Failed to refresh access information, exiting thread %s.' % num)
-
-        return
 
 
     if r.user == None:
@@ -135,7 +118,7 @@ def get_submissions(num):
 
             new_threads = []
 
-            multisub = r.get_subreddit('+'.join(tocheck.keys()))
+            multisub = r.subreddit('+'.join(tocheck.keys()))
 
 
             for sub in tocheck:
@@ -143,7 +126,7 @@ def get_submissions(num):
                 tocheck[sub]['checked'] = time.time()
 
 
-            for thread in reversed(list(multisub.get_new(limit = len(tocheck) * 4))):
+            for thread in reversed(list(multisub.new(limit = len(tocheck) * 4))):
 
                 sub = thread.subreddit.display_name
 
@@ -160,12 +143,13 @@ def get_submissions(num):
 
                 prefix = 'Self post:' if thread.is_self else 'Link post:'
 
-                message = '%s "%s" posted in /r/%s by %s. %s%s' % (
+                message = '%s "%s" posted in /r/%s by %s. ( %s )%s%s' % (
                     style.color(prefix, style.GREEN),
                     thread.title,
                     sub,
                     thread.author,
-                    thread.short_link,
+                    'redd.it/{}'.format(thread.id),
+                    '' if thread.is_self else (' [ %s ]' % thread.url),
                     style.color(' NSFW', style.RED) if thread.over_18 else ''
                 )
 
@@ -261,7 +245,7 @@ def access_denied(sub):
 
     try:
 
-        public = r.get_subreddit(sub).subreddit_type
+        public = r.subreddit(sub).subreddit_type
 
     except Exception as e:
 

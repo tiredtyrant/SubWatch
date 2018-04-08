@@ -16,7 +16,9 @@ def divert(prefix, chan, params):
 @hook.command('undivert', perm='admin')
 def undivert(prefix, chan, params):
 
-    del bot.config.get('divert', {}).get(params[0])
+    if params[0] in bot.config.get('divert', {}):
+        del bot.config['divert'][params[0]]
+    #del bot.config.get('divert', {}).get(params[0])
 
     bot.save()
 

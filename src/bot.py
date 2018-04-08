@@ -277,7 +277,7 @@ class DissBot():
 
                         where = chan
 
-                        divert = bot.config.get('divert', {})
+                        divert = self.config.get('divert', {})
 
                         if hasattr(func, '_divert') or hasattr(func, '_control'):
 
