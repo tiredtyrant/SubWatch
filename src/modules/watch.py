@@ -139,17 +139,34 @@ def get_submissions(num):
 
             for thread in new_threads:
 
+                if thread.author.name.lower() in ['']:
+                    print('ignored post by {}'.format( thread.author.name))
+                    continue
+
                 sub = thread.subreddit.display_name
 
-                prefix = 'Self post:' if thread.is_self else 'Link post:'
+                if not thread.is_self:
+                    url = ''
+                    urlshort = ''
 
-                message = '%s "%s" posted in /r/%s by %s. ( %s )%s%s' % (
-                    style.color(prefix, style.GREEN),
-                    thread.title,
-                    sub,
+                    if len(thread.url) < 45:
+                        url = thread.url
+                    else:
+                        try:
+                            urlshort = get_isgd(thread.url)
+                            url = urlparse(thread.url).netloc
+                        except:
+                            url = urlparse(thread.url).netloc
+
+                        if urlshort:
+                            url = url + ' - ' + urlshort
+
+                message = '%s: <%s> %s ( %s ) [ %s ] %s' % (
+                    style.bold('/r/'+sub),
                     thread.author,
-                    'redd.it/{}'.format(thread.id),
-                    '' if thread.is_self else (' [ %s ]' % thread.url),
+                    thread.title,
+                    'https://redd.it/{}'.format(thread.id),
+                    'self.'+sub if thread.is_self else url,
                     style.color(' NSFW', style.RED) if thread.over_18 else ''
                 )
 
