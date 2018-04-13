@@ -10,7 +10,8 @@ import types
 
 from queue import Queue
 from threading import Thread, activeCount
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
+import requests
 
 
 r = praw.Reddit(user_agent = 'IRC SubWatch by /u/Dissimulate')
