@@ -4,6 +4,7 @@
     "flood_limit": 8,
     "ident": "",
     "ignore": [],
+    "ignorepostsby": [],
     "ipv6": false,
     "log": "##logchannel",
     "nick": "",

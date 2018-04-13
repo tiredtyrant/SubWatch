@@ -145,7 +145,7 @@ def get_submissions(num):
 
             for thread in new_threads:
 
-                if thread.author.name.lower() in ['']:
+                if thread.author.name.lower() in bot.config['ignorepostsby']:
                     print('ignored post by {}'.format( thread.author.name))
                     continue
 
@@ -304,6 +304,36 @@ def check_wiki(sub, chan):
         return False
 
     return True
+
+@hook.command('block', flags='%@')
+def add_ignoreuser(prefix, chan, params):
+
+    if 'ignorepostsby' not in bot.config:
+
+        bot.config['ignorepostsby'] = []
+
+    if params[0] not in bot.config['ignorepostsby']:
+
+        bot.config['ignorepostsby'].append(params[0].lower())
+
+        bot.say(chan, 'Ignoring posts by {}'.format(params[0]))
+
+    bot.save()
+
+@hook.command('unblock', flags='%@')
+def add_unignoreuser(prefix, chan, params):
+
+    if 'ignorepostsby' not in bot.config:
+
+        bot.config['ignorepostsby'] = []
+
+    if params[0] not in bot.config['ignorepostsby']:
+
+        bot.config['ignorepostsby'].remove(params[0].lower())
+
+        bot.say(chan, 'Accepting posts by {}'.format(params[0]))
+
+    bot.save()
 
 
 @hook.command('add', flags='%@')
