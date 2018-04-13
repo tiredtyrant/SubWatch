@@ -10,6 +10,7 @@ import types
 
 from queue import Queue
 from threading import Thread, activeCount
+from urllib.parse import urlparse
 
 
 r = praw.Reddit(user_agent = 'IRC SubWatch by /u/Dissimulate')
@@ -34,6 +35,10 @@ shrink = Queue()
 start_count = 4
 thread_count = 0
 
+def get_isgd(url):
+    isgdurl = 'http://is.gd/create.php?format=simple&url=' + quote(url,safe='')
+    result = requests.get(isgdurl)
+    return result.text
 
 def get_submissions(num):
 
