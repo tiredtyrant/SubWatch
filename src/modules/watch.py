@@ -327,7 +327,7 @@ def add_unignoreuser(prefix, chan, params):
 
         bot.config['ignorepostsby'] = []
 
-    if params[0] not in bot.config['ignorepostsby']:
+    if params[0] in bot.config['ignorepostsby']:
 
         bot.config['ignorepostsby'].remove(params[0].lower())
 
