@@ -6,3 +6,9 @@ src/config.test.json
 src/config.json
 
 src/praw.ini
+
+venv
+
+.vscode
+
+src/submission_control.db
