@@ -12,9 +12,12 @@ from queue import Queue
 from threading import Thread, activeCount
 from urllib.parse import urlparse, quote
 import requests
+import sqlite3
+import datetime
+import statistics
 
 
-r = praw.Reddit(user_agent = 'IRC SubWatch by /u/Dissimulate')
+r = praw.Reddit('subwatch1')
 
 
 if r.user == None:
@@ -41,13 +44,102 @@ def get_isgd(url):
     result = requests.get(isgdurl)
     return result.text
 
+def log_submissions(submissionList, filename):
+    # log in txt file for debugging
+    log = open(filename, 'w')
+    for s in submissionList:
+        logline = '{sub} {karma} - redd.it/{id} - {title} - {timestamp}\n'.format(
+            sub = s.subreddit,
+            karma = s.score,
+            id = s.id,
+            title = s.title,
+            timestamp = s.created_utc
+        )
+        log.write(logline)
+    log.close()
+
+def init_db(subredditNames):
+    con = sqlite3.connect('submission_control.db')
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS processed_submissions (post_id TEXT NOT NULL PRIMARY KEY, timestamp TEXT NOT NULL);")
+
+    # Preprocess first posts so the bot wont flood the channel on startup
+    submissions = check_submissions_hot(subredditNames)
+    db_insert_bulk([(submission.id, submission.created_utc) for submission in submissions])
+
+    #log_submissions(submissions, 'out.txt')
+
+def db_insert_bulk(dataList):
+    con = sqlite3.connect('submission_control.db')
+    cur = con.cursor()
+    cur.executemany('INSERT INTO processed_submissions VALUES (?,?);', dataList)
+    con.commit()
+
+def db_purge_old():
+    # TODO - define a purging policy. For now we never delete anything from the database.
+    pass
+
+def db_check_exists(id):
+    con = sqlite3.connect('submission_control.db')
+    cur = con.cursor()
+    cur.execute('SELECT 1 FROM processed_submissions WHERE post_id = ?;', (id,))
+
+    exists = cur.fetchone() is not None
+
+    con.close()
+    return exists
+
+def check_submissions_new(tocheck):
+
+    new_threads = []
+
+    multisub = r.subreddit('+'.join(tocheck.keys()))
+
+    for sub in tocheck:
+
+        tocheck[sub]['checked'] = time.time()
+
+    for thread in reversed(list(multisub.new(limit = len(tocheck) * 4))):
+
+        sub = thread.subreddit.display_name
+
+        if thread.created_utc > tocheck[sub.lower()]['thread']:
+
+            new_threads.append(thread)
+
+            tocheck[sub.lower()]['thread'] = thread.created_utc
+
+    return new_threads
+
+def check_submissions_hot(subredditList):
+
+    new_submissions = []
+    submission_limit_per_subreddit = 25
+
+    for subredditName in subredditList:
+        subs = r.subreddit(subredditName)
+        
+        hotList = list(subs.hot(limit=submission_limit_per_subreddit))
+
+        #log_submissions(hotList, 'hot_{}.txt'.format(subredditName))
+
+        # Pick only submissions that have above average karma. To better calculate the
+        # average, we exclude scores that are outliers. Anything that has a score that is
+        # higher than 3 times the standard deviation is considered an outlier.
+        standard_deviation = statistics.stdev([submission.score for submission in hotList])
+        outliers_removed = [submission for submission in hotList if submission.score < standard_deviation * 3]
+        average_karma = statistics.mean([submission.score for submission in outliers_removed])
+        new_submissions += [submission for submission in hotList if submission.score > average_karma and not db_check_exists(submission.id)]
+
+    return new_submissions
+
 def get_submissions(num):
 
     global subs
     global resize
 
 
-    r = praw.Reddit(user_agent = 'IRC SubWatch by /u/Dissimulate')
+    r = praw.Reddit('subwatch1')
 
 
     if r.user == None:
@@ -122,25 +214,10 @@ def get_submissions(num):
 
         try:
 
-            new_threads = []
+            #new_threads = check_submissions_new(tocheck)
+            new_threads = check_submissions_hot(tocheck.keys())
 
-            multisub = r.subreddit('+'.join(tocheck.keys()))
-
-
-            for sub in tocheck:
-
-                tocheck[sub]['checked'] = time.time()
-
-
-            for thread in reversed(list(multisub.new(limit = len(tocheck) * 4))):
-
-                sub = thread.subreddit.display_name
-
-                if thread.created_utc > tocheck[sub.lower()]['thread']:
-
-                    new_threads.append(thread)
-
-                    tocheck[sub.lower()]['thread'] = thread.created_utc
+            db_insert_bulk([(post.id, post.created_utc) for post in new_threads])
 
 
             for thread in new_threads:
@@ -688,6 +765,10 @@ def init():
         subs.put({'name': sub, 'thread': time.time(), 'checked': 0})
 
         names.append(sub)
+
+    print('Initializing submission ID database...')
+
+    init_db(names)
 
     print('Starting watch threads...')
 
